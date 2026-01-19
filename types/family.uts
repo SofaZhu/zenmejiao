@@ -1,0 +1,49 @@
+// 家庭成员数据类型
+
+export type Gender = 'male' | 'female'
+
+export type RelationType =
+	| 'father' | 'mother'
+	| 'fatherOlderBrother' | 'fatherYoungerBrother' | 'fatherSister'
+	| 'motherBrother' | 'motherSister'
+	| 'olderBrother' | 'youngerBrother' | 'olderSister' | 'youngerSister'
+	| 'son' | 'daughter'
+	| 'grandfather' | 'grandmother'
+	| 'maternalGrandfather' | 'maternalGrandmother'
+	| 'spouse'
+	| 'custom'
+
+export type FamilyMember = {
+	id: string // 唯一标识
+	name: string // 姓名
+	photo: string // 照片路径（可选）
+	gender: Gender // 性别
+	relationType: RelationType // 与用户的关系类型
+	relationTitle: string // 称呼（如：爸爸、堂弟等）
+	relationPath: string[] // 关系路径（如：['father', 'fatherYoungerBrother', 'son']）
+	isOlder: boolean | null // 同辈时是否比用户大（null表示不适用）
+	parentId: string | null // 父节点ID
+	spouseId: string | null // 配偶ID
+	children: string[] // 子女ID列表
+	isPlaceholder: boolean // 是否为占位符（未填写详细信息）
+}
+
+export type UserProfile = {
+	id: string
+	name: string
+	photo: string
+	gender: Gender
+}
+
+export type RelationshipInput = {
+	targetName: string // 目标人物名称
+	targetPhoto: string // 目标人物照片
+	targetGender: Gender // 目标人物性别
+	relationPath: string[] // 关系路径
+	isOlder: boolean | null // 是否比用户大
+}
+
+export type FamilyNetwork = {
+	user: UserProfile
+	members: Map<string, FamilyMember>
+}

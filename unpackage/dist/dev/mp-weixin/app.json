@@ -1,0 +1,40 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/network/network",
+    "pages/profile/profile"
+  ],
+  "window": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "过年怎么叫",
+    "navigationBarBackgroundColor": "#FFFFFF",
+    "backgroundColor": "#F5F5F5"
+  },
+  "tabBar": {
+    "color": "#666666",
+    "selectedColor": "#4a90e2",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "亲戚计算器",
+        "iconPath": "/static/jisuanqi.png",
+        "selectedIconPath": "/static/jisuanqi_hover.png"
+      },
+      {
+        "pagePath": "pages/network/network",
+        "text": "关系列表",
+        "iconPath": "/static/guanxi.png",
+        "selectedIconPath": "/static/guanxi_hover.png"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的",
+        "iconPath": "/static/wode.png",
+        "selectedIconPath": "/static/wode_hover.png"
+      }
+    ]
+  },
+  "usingComponents": {}
+}

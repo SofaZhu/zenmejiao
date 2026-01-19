@@ -1,0 +1,491 @@
+<template>
+	<view class="container">
+
+		<!-- 搜索框 -->
+		<view class="search-box">
+			<input
+				class="search-input"
+				v-model="searchKeyword"
+				placeholder="搜索姓名或关系"
+				placeholder-class="placeholder"
+			/>
+		</view>
+
+		<scroll-view class="network-scroll" scroll-y="true">
+			<view class="network-container">
+				<!-- 用户自己 -->
+				<view class="member-card user-card">
+					<image
+						v-if="userProfile?.photo"
+						class="avatar"
+						:src="userProfile.photo"
+					></image>
+					<view v-else class="avatar-placeholder">
+						<text class="avatar-text">我</text>
+					</view>
+					<text class="member-name">{{ userProfile?.name || '我' }}</text>
+					<text class="member-relation">本人</text>
+				</view>
+
+				<!-- 按辈分分组显示 -->
+				<view v-if="filteredMembers.length > 0">
+					<!-- 爷爷辈 -->
+					<view v-if="grandparentGeneration.length > 0" class="generation-group">
+						<text class="generation-title">爷爷辈</text>
+						<view class="members-list">
+							<view
+								v-for="member in grandparentGeneration"
+								:key="member.id"
+								class="member-card"
+								@click="handleMemberClick(member)"
+								@longpress="showMemberActions(member)"
+							>
+								<image v-if="member.photo" class="avatar" :src="member.photo"></image>
+								<view v-else class="avatar-placeholder">
+									<text class="avatar-text">{{ member.name.substring(0, 1) }}</text>
+								</view>
+								<text class="member-name">{{ member.name }}</text>
+								<text class="member-relation">{{ member.relationTitle }}</text>
+							</view>
+						</view>
+					</view>
+
+					<!-- 父母辈 -->
+					<view v-if="parentGeneration.length > 0" class="generation-group">
+						<text class="generation-title">父母辈</text>
+						<view class="members-list">
+							<view
+								v-for="member in parentGeneration"
+								:key="member.id"
+								class="member-card"
+								@click="handleMemberClick(member)"
+								@longpress="showMemberActions(member)"
+							>
+								<image v-if="member.photo" class="avatar" :src="member.photo"></image>
+								<view v-else class="avatar-placeholder">
+									<text class="avatar-text">{{ member.name.substring(0, 1) }}</text>
+								</view>
+								<text class="member-name">{{ member.name }}</text>
+								<text class="member-relation">{{ member.relationTitle }}</text>
+							</view>
+						</view>
+					</view>
+
+					<!-- 同辈 -->
+					<view v-if="sameGeneration.length > 0" class="generation-group">
+						<text class="generation-title">同辈</text>
+						<view class="members-list">
+							<view
+								v-for="member in sameGeneration"
+								:key="member.id"
+								class="member-card"
+								@click="handleMemberClick(member)"
+								@longpress="showMemberActions(member)"
+							>
+								<image v-if="member.photo" class="avatar" :src="member.photo"></image>
+								<view v-else class="avatar-placeholder">
+									<text class="avatar-text">{{ member.name.substring(0, 1) }}</text>
+								</view>
+								<text class="member-name">{{ member.name }}</text>
+								<text class="member-relation">{{ member.relationTitle }}</text>
+							</view>
+						</view>
+					</view>
+
+					<!-- 小辈 -->
+					<view v-if="childGeneration.length > 0" class="generation-group">
+						<text class="generation-title">小辈</text>
+						<view class="members-list">
+							<view
+								v-for="member in childGeneration"
+								:key="member.id"
+								class="member-card"
+								@click="handleMemberClick(member)"
+								@longpress="showMemberActions(member)"
+							>
+								<image v-if="member.photo" class="avatar" :src="member.photo"></image>
+								<view v-else class="avatar-placeholder">
+									<text class="avatar-text">{{ member.name.substring(0, 1) }}</text>
+								</view>
+								<text class="member-name">{{ member.name }}</text>
+								<text class="member-relation">{{ member.relationTitle }}</text>
+							</view>
+						</view>
+					</view>
+
+					<!-- 其他亲戚 -->
+					<view v-if="otherRelatives.length > 0" class="generation-group">
+						<text class="generation-title">其他亲戚</text>
+						<view class="members-list">
+							<view
+								v-for="member in otherRelatives"
+								:key="member.id"
+								class="member-card"
+								@click="handleMemberClick(member)"
+								@longpress="showMemberActions(member)"
+							>
+								<image v-if="member.photo" class="avatar" :src="member.photo"></image>
+								<view v-else class="avatar-placeholder">
+									<text class="avatar-text">{{ member.name.substring(0, 1) }}</text>
+								</view>
+								<text class="member-name">{{ member.name }}</text>
+								<text class="member-relation">{{ member.relationTitle }}</text>
+							</view>
+						</view>
+					</view>
+				</view>
+
+				<!-- 空状态 -->
+				<view v-if="filteredMembers.length === 0" class="empty-state">
+					<text class="empty-text">暂无家庭成员</text>
+					<text class="empty-hint">请返回首页添加亲戚</text>
+				</view>
+			</view>
+		</scroll-view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { ref, computed, onMounted } from 'vue'
+	import { getUserProfile, getFamilyMembers, updateFamilyMember, deleteFamilyMember } from '../../utils/storage.uts'
+	import type { UserProfile, FamilyMember } from '../../types/family.uts'
+
+	const userProfile = ref<UserProfile | null>(null)
+	const familyMembers = ref<FamilyMember[]>([])
+	const searchKeyword = ref('')
+
+	// 搜索过滤
+	const filteredMembers = computed(() => {
+		if (!searchKeyword.value) {
+			return familyMembers.value
+		}
+		const keyword = searchKeyword.value.toLowerCase()
+		return familyMembers.value.filter(m =>
+			m.name.toLowerCase().includes(keyword) ||
+			m.relationTitle.toLowerCase().includes(keyword)
+		)
+	})
+
+	// 判断辈分 - 通过计算路径中的辈分变化
+	function getGeneration(member: FamilyMember): number {
+		const path = member.relationPath
+		if (path.length === 0) return 0
+
+		let generation = 0
+
+		for (const relation of path) {
+			// 向上一辈：父母、爷爷奶奶、外公外婆
+			if (relation === 'father' || relation === 'mother' ||
+			    relation === 'grandfather' || relation === 'grandmother' ||
+			    relation === 'maternalGrandfather' || relation === 'maternalGrandmother') {
+				generation++
+			}
+			// 向下一辈：儿子、女儿
+			else if (relation === 'son' || relation === 'daughter') {
+				generation--
+			}
+			// 同辈关系：兄弟姐妹不改变辈分
+			// olderBrother, youngerBrother, olderSister, youngerSister 不改变 generation
+		}
+
+		return generation
+	}
+
+	// 爷爷辈
+	const grandparentGeneration = computed(() => {
+		return filteredMembers.value.filter(m => {
+			const gen = getGeneration(m)
+			// 排除"亲戚"/"远房亲戚"
+			return gen === 2 && m.relationTitle !== '亲戚' && m.relationTitle !== '远房亲戚'
+		})
+	})
+
+	// 父母辈
+	const parentGeneration = computed(() => {
+		return filteredMembers.value.filter(m => {
+			const gen = getGeneration(m)
+			// 排除"亲戚"/"远房亲戚"
+			return gen === 1 && m.relationTitle !== '亲戚' && m.relationTitle !== '远房亲戚'
+		})
+	})
+
+	// 同辈
+	const sameGeneration = computed(() => {
+		return filteredMembers.value.filter(m => {
+			const gen = getGeneration(m)
+			// 排除"亲戚"/"远房亲戚"
+			return gen === 0 && m.relationTitle !== '亲戚' && m.relationTitle !== '远房亲戚'
+		})
+	})
+
+	// 小辈
+	const childGeneration = computed(() => {
+		return filteredMembers.value.filter(m => {
+			const gen = getGeneration(m)
+			// 排除"亲戚"/"远房亲戚"
+			return gen === -1 && m.relationTitle !== '亲戚' && m.relationTitle !== '远房亲戚'
+		})
+	})
+
+	// 其他亲戚（辈分>=3或<=-2，或者称呼为"亲戚"/"远房亲戚"）
+	const otherRelatives = computed(() => {
+		return filteredMembers.value.filter(m => {
+			const gen = getGeneration(m)
+			// 辈分太远，或者称呼是通用的"亲戚"/"远房亲戚"
+			return gen >= 3 || gen <= -2 ||
+			       m.relationTitle === '亲戚' ||
+			       m.relationTitle === '远房亲戚'
+		})
+	})
+
+	onMounted(() => {
+		loadData()
+	})
+
+	function loadData() {
+		userProfile.value = getUserProfile()
+		familyMembers.value = getFamilyMembers()
+	}
+
+	function handleMemberClick(member: FamilyMember) {
+		uni.showToast({
+			title: member.name + ' - ' + member.relationTitle,
+			icon: 'none'
+		})
+	}
+
+	function showMemberActions(member: FamilyMember) {
+		uni.showActionSheet({
+			itemList: ['编辑', '删除'],
+			success: (res) => {
+				if (res.tapIndex === 0) {
+					// 编辑
+					editMember(member)
+				} else if (res.tapIndex === 1) {
+					// 删除
+					confirmDelete(member)
+				}
+			}
+		})
+	}
+
+	function editMember(member: FamilyMember) {
+		// 编辑姓名
+		uni.showModal({
+			title: '编辑姓名',
+			editable: true,
+			placeholderText: member.name,
+			success: (res) => {
+				if (res.confirm && res.content) {
+					// 更新姓名
+					updateFamilyMember(member.id, { name: res.content })
+					loadData()
+
+					// 询问是否更新照片
+					uni.showModal({
+						title: '更新照片',
+						content: '是否要更新照片？',
+						success: (photoRes) => {
+							if (photoRes.confirm) {
+								choosePhotoForMember(member)
+							}
+						}
+					})
+				}
+			}
+		})
+	}
+
+	function choosePhotoForMember(member: FamilyMember) {
+		uni.chooseImage({
+			count: 1,
+			sizeType: ['compressed'],
+			sourceType: ['album', 'camera'],
+			success: (res) => {
+				const tempFilePath = res.tempFilePaths[0]
+				updateFamilyMember(member.id, { photo: tempFilePath })
+				loadData()
+				uni.showToast({
+					title: '照片已更新',
+					icon: 'success'
+				})
+			}
+		})
+	}
+
+	function confirmDelete(member: FamilyMember) {
+		uni.showModal({
+			title: '确认删除',
+			content: '确定要删除 ' + member.name + ' 吗？',
+			success: (res) => {
+				if (res.confirm) {
+					deleteFamilyMember(member.id)
+					loadData()
+					uni.showToast({
+						title: '已删除',
+						icon: 'success'
+					})
+				}
+			}
+		})
+	}
+
+	function goToHome() {
+		uni.switchTab({
+			url: '/pages/index/index'
+		})
+	}
+
+	function goToProfile() {
+		uni.switchTab({
+			url: '/pages/profile/profile'
+		})
+	}
+</script>
+
+<style scoped>
+	.container {
+		display: flex;
+		flex-direction: column;
+		height: 100vh;
+		background-color: #f5f5f5;
+	}
+
+	.header {
+		background-color: #4a90e2;
+		padding: 40rpx 30rpx 30rpx;
+		text-align: center;
+	}
+
+	.title {
+		font-size: 40rpx;
+		font-weight: bold;
+		color: #ffffff;
+	}
+
+	.search-box {
+		padding: 20rpx 30rpx;
+		background-color: #ffffff;
+		border-bottom: 1rpx solid #e0e0e0;
+	}
+
+	.search-input {
+		width: 100%;
+		height: 70rpx;
+		padding: 0 20rpx;
+		background-color: #f5f5f5;
+		border-radius: 35rpx;
+		font-size: 28rpx;
+	}
+
+	.placeholder {
+		color: #999999;
+	}
+
+	.network-scroll {
+		flex: 1;
+		overflow-y: auto;
+	}
+
+	.network-container {
+		padding: 20rpx 30rpx 120rpx;
+	}
+
+	.generation-group {
+		margin-bottom: 40rpx;
+	}
+
+	.generation-title {
+		font-size: 32rpx;
+		font-weight: bold;
+		color: #333333;
+		margin-bottom: 20rpx;
+		padding-left: 10rpx;
+		border-left: 6rpx solid #4a90e2;
+	}
+
+	.members-list {
+		display: flex;
+		flex-direction: row;
+		flex-wrap: wrap;
+		justify-content: flex-start;
+		gap: 20rpx;
+	}
+
+	.member-card {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		width: 150rpx;
+		padding: 20rpx;
+		background-color: #ffffff;
+		border-radius: 15rpx;
+		box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.05);
+	}
+
+	.user-card {
+		width: 100%;
+		margin-bottom: 30rpx;
+		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	}
+
+	.user-card .member-name,
+	.user-card .member-relation {
+		color: #ffffff;
+	}
+
+	.avatar {
+		width: 100rpx;
+		height: 100rpx;
+		border-radius: 50rpx;
+		margin-bottom: 15rpx;
+	}
+
+	.avatar-placeholder {
+		width: 100rpx;
+		height: 100rpx;
+		border-radius: 50rpx;
+		background-color: #e0e0e0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		margin-bottom: 15rpx;
+	}
+
+	.avatar-text {
+		font-size: 36rpx;
+		font-weight: bold;
+		color: #666666;
+	}
+
+	.member-name {
+		font-size: 28rpx;
+		font-weight: bold;
+		color: #333333;
+		margin-bottom: 8rpx;
+	}
+
+	.member-relation {
+		font-size: 24rpx;
+		color: #666666;
+	}
+
+	.empty-state {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		padding: 100rpx 0;
+	}
+
+	.empty-text {
+		font-size: 32rpx;
+		color: #999999;
+		margin-bottom: 15rpx;
+	}
+
+	.empty-hint {
+		font-size: 26rpx;
+		color: #cccccc;
+	}
+</style>

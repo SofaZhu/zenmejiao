@@ -1,0 +1,510 @@
+<template>
+	<view class="container">
+	<scroll-view class="scroll-content" scroll-y="true">
+			<view class="form">
+				<!-- 目标人物姓名 -->
+				<view class="form-item">
+					<text class="label">目标人物姓名</text>
+					<input
+						class="input"
+						v-model="targetName"
+						placeholder="请输入姓名"
+						placeholder-class="placeholder"
+					/>
+				</view>
+
+				<!-- 目标人物照片 -->
+				<view class="form-item">
+					<text class="label">照片（选填）</text>
+					<view class="photo-upload" @click="choosePhoto">
+						<image v-if="targetPhoto" class="photo-preview" :src="targetPhoto"></image>
+						<view v-else class="photo-placeholder">
+							<text class="photo-text">点击上传照片</text>
+						</view>
+					</view>
+				</view>
+
+				<!-- 关系选择 -->
+				<view class="form-item">
+					<text class="label">与我的关系</text>
+					<text class="hint">请按顺序选择关系路径</text>
+				</view>
+
+				<!-- 关系路径显示 -->
+				<view class="relation-path" v-if="relationPath.length > 0">
+					<text class="path-text">当前路径：</text>
+					<view class="path-items">
+						<text class="path-item" v-for="(item, index) in relationPath" :key="index">
+							{{ getRelationLabel(item) }}
+							<text v-if="index < relationPath.length - 1" class="arrow"> → </text>
+						</text>
+					</view>
+					<view class="clear-btn" @click="clearLastRelation">
+						<text class="clear-text">撤销上一步</text>
+					</view>
+				</view>
+
+			<!-- 关系选择按钮 -->
+			<view class="relation-buttons">
+				<!-- 父母 -->
+				<view class="button-row" v-if="canAddParent">
+					<view class="relation-btn" @click="addRelation('father')">
+						<text>爸爸</text>
+					</view>
+					<view class="relation-btn" @click="addRelation('mother')">
+						<text>妈妈</text>
+					</view>
+				</view>
+
+				<!-- 兄弟姐妹 -->
+				<view class="button-row" v-if="canAddSibling">
+					<view class="relation-btn" @click="addRelation('olderBrother')">
+						<text>哥哥</text>
+					</view>
+					<view class="relation-btn" @click="addRelation('youngerBrother')">
+						<text>弟弟</text>
+					</view>
+					<view class="relation-btn" @click="addRelation('olderSister')">
+						<text>姐姐</text>
+					</view>
+					<view class="relation-btn" @click="addRelation('youngerSister')">
+						<text>妹妹</text>
+					</view>
+				</view>
+
+				<view class="button-row" v-if="canAddChild">
+					<view class="relation-btn" @click="addRelation('son')">
+						<text>儿子</text>
+					</view>
+					<view class="relation-btn" @click="addRelation('daughter')">
+						<text>女儿</text>
+					</view>
+				</view>
+			</view>
+
+			<!-- 操作按钮 -->
+			<view class="action-buttons">
+				<view class="btn btn-secondary" @click="resetForm">
+					<text>重置</text>
+				</view>
+				<view class="btn btn-primary" @click="calculate">
+					<text>计算称呼</text>
+				</view>
+			</view>
+
+			<!-- 结果显示 -->
+			<view class="result" v-if="calculatedTitle">
+				<text class="result-label">计算结果：</text>
+				<text class="result-title">{{ calculatedTitle }}</text>
+			</view>
+			</view>
+		</scroll-view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { ref, computed } from 'vue'
+	import { calculateRelationshipTitle, generateId } from '../../utils/relationshipCalculator.uts'
+	import { addFamilyMember, getUserProfile } from '../../utils/storage.uts'
+	import type { Gender, FamilyMember } from '../../types/family.uts'
+
+	const targetName = ref('')
+	const targetPhoto = ref('')
+	const relationPath = ref<string[]>([])
+	const calculatedTitle = ref('')
+
+	// 根据关系路径自动判断性别
+	function getGenderFromPath(path: string[]): Gender {
+		if (path.length === 0) return 'male'
+
+		const lastRelation = path[path.length - 1]
+
+		// 男性关系
+		if (['father', 'olderBrother', 'youngerBrother', 'son', 'grandfather'].includes(lastRelation)) {
+			return 'male'
+		}
+
+		// 女性关系
+		if (['mother', 'olderSister', 'youngerSister', 'daughter', 'grandmother'].includes(lastRelation)) {
+			return 'female'
+		}
+
+		return 'male'
+	}
+
+	// 上传照片
+	function choosePhoto() {
+		uni.chooseImage({
+			count: 1,
+			sizeType: ['compressed'],
+			sourceType: ['album', 'camera'],
+			success: (res) => {
+				targetPhoto.value = res.tempFilePaths[0]
+			}
+		})
+	}
+
+	// 判断是否可以添加父母关系
+	const canAddParent = computed(() => {
+		const len = relationPath.value.length
+		if (len === 0) return true // 初始可以选择
+		const lastRelation = relationPath.value[len - 1]
+		// 在任何人物后都可以添加父母
+		return lastRelation === 'father' || lastRelation === 'mother' ||
+		       lastRelation === 'olderBrother' || lastRelation === 'youngerBrother' ||
+		       lastRelation === 'olderSister' || lastRelation === 'youngerSister' ||
+		       lastRelation === 'son' || lastRelation === 'daughter'
+	})
+
+	// 判断是否可以添加兄弟姐妹关系
+	const canAddSibling = computed(() => {
+		const len = relationPath.value.length
+		if (len === 0) return true // 初始可以选择
+		const lastRelation = relationPath.value[len - 1]
+		return lastRelation === 'father' || lastRelation === 'mother' ||
+		       lastRelation === 'olderBrother' || lastRelation === 'youngerBrother' ||
+		       lastRelation === 'olderSister' || lastRelation === 'youngerSister' ||
+		       lastRelation === 'son' || lastRelation === 'daughter'
+	})
+
+	// 判断是否可以添加子女关系
+	const canAddChild = computed(() => {
+		const len = relationPath.value.length
+		if (len === 0) return true // 初始可以选择
+		const lastRelation = relationPath.value[len - 1]
+		return lastRelation === 'father' || lastRelation === 'mother' ||
+		       lastRelation === 'olderBrother' || lastRelation === 'youngerBrother' ||
+		       lastRelation === 'olderSister' || lastRelation === 'youngerSister' ||
+		       lastRelation === 'son' || lastRelation === 'daughter'
+	})
+
+	// 获取关系标签
+	function getRelationLabel(relation: string): string {
+		const labels: Record<string, string> = {
+			'father': '爸爸',
+			'mother': '妈妈',
+			'olderBrother': '哥哥',
+			'youngerBrother': '弟弟',
+			'olderSister': '姐姐',
+			'youngerSister': '妹妹',
+			'son': '儿子',
+			'daughter': '女儿'
+		}
+		return labels[relation] || relation
+	}
+
+	// 添加关系
+	function addRelation(relation: string) {
+		relationPath.value.push(relation)
+	}
+
+	// 撤销上一步
+	function clearLastRelation() {
+		if (relationPath.value.length > 0) {
+			relationPath.value.pop()
+		}
+	}
+
+	// 重置表单
+	function resetForm() {
+		targetName.value = ''
+		targetPhoto.value = ''
+		relationPath.value = []
+		calculatedTitle.value = ''
+	}
+
+	// 计算称呼
+	function calculate() {
+		if (!targetName.value) {
+			uni.showToast({ title: '请输入姓名', icon: 'none' })
+			return
+		}
+
+		if (relationPath.value.length === 0) {
+			uni.showToast({ title: '请选择关系', icon: 'none' })
+			return
+		}
+
+		// 自动判断性别
+		const gender = getGenderFromPath(relationPath.value)
+
+		// 计算称呼
+		const title = calculateRelationshipTitle(
+			relationPath.value,
+			gender,
+			null
+		)
+		calculatedTitle.value = title
+
+		// 保存到家庭网络
+		const member: FamilyMember = {
+			id: generateId(),
+			name: targetName.value,
+			photo: targetPhoto.value,
+			gender: gender,
+			relationType: 'custom',
+			relationTitle: title,
+			relationPath: relationPath.value,
+			isOlder: null,
+			parentId: null,
+			spouseId: null,
+			children: [],
+			isPlaceholder: false
+		}
+
+		addFamilyMember(member)
+
+		// 显示成功提示
+		uni.showToast({
+			title: '已添加到家庭网络',
+			icon: 'success',
+			duration: 2000
+		})
+
+		// 清空表单（保留姓名和照片，清空路径）
+		relationPath.value = []
+
+		// 不自动跳转，让用户手动切换到关系网查看
+	}
+
+	// 导航到关系网页面
+	function goToNetwork() {
+		uni.navigateTo({ url: '/pages/network/network' })
+	}
+
+	// 导航到个人资料页面
+	function goToProfile() {
+		uni.navigateTo({ url: '/pages/profile/profile' })
+	}
+</script>
+
+<style>
+	.container {
+		padding: 20px;
+		background-color: #f5f5f5;
+		min-height: 100vh;
+	}
+
+	.header {
+		text-align: center;
+		margin-bottom: 30px;
+	}
+
+	.title {
+		font-size: 24px;
+		font-weight: bold;
+		color: #333;
+	}
+
+	.form {
+		background-color: #fff;
+		border-radius: 10px;
+		padding: 20px;
+	}
+
+	.form-item {
+		margin-bottom: 20px;
+	}
+
+	.label {
+		font-size: 16px;
+		color: #333;
+		margin-bottom: 10px;
+		display: block;
+	}
+
+	.hint {
+		font-size: 12px;
+		color: #999;
+		margin-top: 5px;
+		display: block;
+	}
+
+	.input {
+		width: 100%;
+		height: 45px;
+		border: 1px solid #ddd;
+		border-radius: 5px;
+		padding: 0 15px;
+		font-size: 14px;
+	}
+
+	.placeholder {
+		color: #ccc;
+	}
+
+	.photo-upload {
+		width: 100%;
+		height: 120px;
+		border: 2px dashed #ddd;
+		border-radius: 8px;
+		align-items: center;
+		justify-content: center;
+		background-color: #fafafa;
+	}
+
+	.photo-preview {
+		width: 100%;
+		height: 100%;
+		border-radius: 8px;
+	}
+
+	.photo-placeholder {
+		align-items: center;
+		justify-content: center;
+	}
+
+	.photo-text {
+		font-size: 14px;
+		color: #999;
+	}
+
+	.radio-group {
+		flex-direction: row;
+		gap: 15px;
+	}
+
+	.radio-item {
+		padding: 10px 20px;
+		border: 1px solid #ddd;
+		border-radius: 5px;
+		background-color: #fff;
+	}
+
+	.radio-item.active {
+		background-color: #007aff;
+		border-color: #007aff;
+	}
+
+	.radio-text {
+		font-size: 14px;
+		color: #333;
+	}
+
+	.radio-item.active .radio-text {
+		color: #fff;
+	}
+
+	.scroll-content {
+		flex: 1;
+	}
+
+	.relation-path {
+		padding: 15px;
+		background-color: #f0f0f0;
+		border-radius: 5px;
+		margin-bottom: 15px;
+	}
+
+	.path-text {
+		font-size: 14px;
+		color: #666;
+		margin-bottom: 8px;
+		display: block;
+	}
+
+	.path-items {
+		flex-direction: row;
+		flex-wrap: wrap;
+		margin-bottom: 10px;
+	}
+
+	.path-item {
+		font-size: 14px;
+		color: #007aff;
+		font-weight: bold;
+	}
+
+	.arrow {
+		color: #999;
+		margin: 0 3px;
+	}
+
+	.clear-btn {
+		padding: 5px 10px;
+		background-color: #ff3b30;
+		border-radius: 3px;
+		align-self: flex-start;
+	}
+
+	.clear-text {
+		font-size: 12px;
+		color: #fff;
+	}
+
+	.relation-buttons {
+		margin-top: 15px;
+	}
+
+	.button-row {
+		flex-direction: row;
+		flex-wrap: wrap;
+		gap: 10px;
+		margin-bottom: 10px;
+	}
+
+	.relation-btn {
+		padding: 10px 15px;
+		background-color: #e8f4ff;
+		border-radius: 5px;
+		border: 1px solid #007aff;
+	}
+
+	.relation-btn text {
+		font-size: 14px;
+		color: #007aff;
+	}
+
+	.action-buttons {
+		flex-direction: row;
+		gap: 15px;
+		margin-top: 30px;
+	}
+
+	.btn {
+		flex: 1;
+		height: 45px;
+		border-radius: 5px;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.btn-secondary {
+		background-color: #f0f0f0;
+	}
+
+	.btn-secondary text {
+		color: #666;
+		font-size: 16px;
+	}
+
+	.btn-primary {
+		background-color: #007aff;
+	}
+
+	.btn-primary text {
+		color: #fff;
+		font-size: 16px;
+	}
+
+	.result {
+		margin-top: 30px;
+		padding: 20px;
+		background-color: #e8f4ff;
+		border-radius: 10px;
+		text-align: center;
+	}
+
+	.result-label {
+		font-size: 14px;
+		color: #666;
+		margin-bottom: 10px;
+		display: block;
+	}
+
+	.result-title {
+		font-size: 28px;
+		color: #007aff;
+		font-weight: bold;
+	}
+</style>

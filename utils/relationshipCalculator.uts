@@ -1,0 +1,359 @@
+// 亲戚关系计算逻辑
+
+import { getRelationshipConfig } from '../config/relationshipTitles.uts'
+import type { Gender, FamilyMember, RelationshipInput } from '../types/family.uts'
+
+// 根据关系路径计算称呼
+export function calculateRelationshipTitle(
+	relationPath: string[],
+	gender: Gender,
+	isOlder: boolean | null
+): string {
+	const config = getRelationshipConfig()
+
+	console.log('=== 开始计算关系 ===')
+	console.log('路径长度:', relationPath.length)
+	console.log('完整路径:', JSON.stringify(relationPath))
+	console.log('性别:', gender)
+
+	if (relationPath.length === 0) {
+		return '未知'
+	}
+
+	// 1层：直系关系
+	if (relationPath.length === 1) {
+		console.log('进入1层关系处理')
+		return getOneLayerRelation(relationPath[0], config)
+	}
+
+	// 2层：父辈、子辈关系
+	if (relationPath.length === 2) {
+		console.log('进入2层关系处理')
+		return getTwoLayerRelation(relationPath, gender, config)
+	}
+
+	// 3层：堂表兄弟姐妹
+	if (relationPath.length === 3) {
+		console.log('进入3层关系处理')
+		return getThreeLayerRelation(relationPath, gender, config)
+	}
+
+	// 4层：复杂关系
+	if (relationPath.length === 4) {
+		console.log('进入4层关系处理')
+		return getFourLayerRelation(relationPath, gender, config)
+	}
+
+	// 5层：更复杂的关系
+	if (relationPath.length === 5) {
+		return getFiveLayerRelation(relationPath, gender, config)
+	}
+
+	// 6层及以上：默认返回通用称呼
+	if (relationPath.length >= 6) {
+		return getSixPlusLayerRelation(relationPath, gender, config)
+	}
+
+	// 默认返回通用称呼
+	return getGenericRelation(relationPath, gender)
+}
+
+// 1层关系
+function getOneLayerRelation(relation: string, config: any): string {
+	const map: Record<string, string> = {
+		'father': config.father.title,
+		'mother': config.mother.title,
+		'son': config.son.title,
+		'daughter': config.daughter.title,
+		'olderBrother': config.olderBrother.title,
+		'youngerBrother': config.youngerBrother.title,
+		'olderSister': config.olderSister.title,
+		'youngerSister': config.youngerSister.title,
+		'grandfather': config.grandfather.title,
+		'grandmother': config.grandmother.title,
+		'maternalGrandfather': config.maternalGrandfather.title,
+		'maternalGrandmother': config.maternalGrandmother.title
+	}
+	return map[relation] || '未知'
+}
+
+// 2层关系
+function getTwoLayerRelation(path: string[], gender: Gender, config: any): string {
+	const [first, second] = path
+
+	// 爸爸的关系
+	if (first === 'father') {
+		if (second === 'olderBrother') return config.fatherOlderBrother.title
+		if (second === 'youngerBrother') return config.fatherYoungerBrother.title
+		if (second === 'olderSister' || second === 'youngerSister') return config.fatherSister.title
+		if (second === 'father') return config.grandfather.title
+		if (second === 'mother') return config.grandmother.title
+	}
+
+	// 妈妈的关系
+	if (first === 'mother') {
+		if (second === 'olderBrother' || second === 'youngerBrother') return config.motherBrother.title
+		if (second === 'olderSister' || second === 'youngerSister') return config.motherSister.title
+		if (second === 'father') return config.maternalGrandfather.title
+		if (second === 'mother') return config.maternalGrandmother.title
+	}
+
+	// 兄弟的子女
+	if (first === 'olderBrother' || first === 'youngerBrother') {
+		if (second === 'son') return config.nephew.title
+		if (second === 'daughter') return config.niece.title
+	}
+
+	// 姐妹的子女
+	if (first === 'olderSister' || first === 'youngerSister') {
+		if (second === 'son') return config.nephewFromSister.title
+		if (second === 'daughter') return config.nieceFromSister.title
+	}
+
+	// 子女的子女
+	if (first === 'son') {
+		if (second === 'son') return config.grandson.title
+		if (second === 'daughter') return config.granddaughter.title
+	}
+
+	if (first === 'daughter') {
+		if (second === 'son') return config.maternalGrandson.title
+		if (second === 'daughter') return config.maternalGranddaughter.title
+	}
+
+	return '亲戚'
+}
+
+// 3层关系
+function getThreeLayerRelation(path: string[], gender: Gender, config: any): string {
+	const [first, second, third] = path
+
+	// 爸爸的兄弟的子女 = 堂兄弟姐妹
+	if (first === 'father' && (second === 'olderBrother' || second === 'youngerBrother')) {
+		if (third === 'son' && gender === 'male') {
+			return config.youngerCousinBrotherPaternal.title // 默认堂弟
+		}
+		if (third === 'daughter' && gender === 'female') {
+			return config.youngerCousinSisterPaternal.title // 默认堂妹
+		}
+	}
+
+	// 妈妈的兄弟姐妹的子女 = 表兄弟姐妹
+	if (first === 'mother' && (second === 'olderBrother' || second === 'youngerBrother' || second === 'olderSister' || second === 'youngerSister')) {
+		if (third === 'son' && gender === 'male') {
+			return config.youngerCousinBrotherMaternal.title // 默认表弟
+		}
+		if (third === 'daughter' && gender === 'female') {
+			return config.youngerCousinSisterMaternal.title // 默认表妹
+		}
+	}
+
+	// 爸爸的姐妹的子女 = 表兄弟姐妹
+	if (first === 'father' && (second === 'olderSister' || second === 'youngerSister')) {
+		if (third === 'son' && gender === 'male') {
+			return config.youngerCousinBrotherMaternal.title
+		}
+		if (third === 'daughter' && gender === 'female') {
+			return config.youngerCousinSisterMaternal.title
+		}
+	}
+
+	return '亲戚'
+}
+
+// 4层关系
+function getFourLayerRelation(path: string[], gender: Gender, config: any): string {
+	const [first, second, third, fourth] = path
+
+	// 调试日志
+	console.log('=== 4层关系调试 ===')
+	console.log('路径:', path)
+	console.log('first:', first, 'second:', second, 'third:', third, 'fourth:', fourth)
+
+	// 爸爸->爸爸->兄弟->儿子/女儿 = 爷爷的儿子的儿子/女儿 = 堂叔/堂姑
+	if (first === 'father' && second === 'father') {
+		console.log('匹配到: father-father 路径')
+		// 爷爷的儿子（爸爸的兄弟）的子女
+		if (third === 'olderBrother' || third === 'youngerBrother') {
+			console.log('匹配到: 兄弟关系, third =', third)
+			if (fourth === 'son') {
+				console.log('返回: 堂叔')
+				return '堂叔'
+			}
+			if (fourth === 'daughter') {
+				console.log('返回: 堂姑')
+				return '堂姑'
+			}
+		}
+		if (third === 'olderSister' || third === 'youngerSister') {
+			if (fourth === 'son') return '表叔'
+			if (fourth === 'daughter') return '姑婆'
+		}
+	}
+
+	// 爸爸->妈妈->弟弟->女儿 = 奶奶的弟弟的女儿 = 姨婆的女儿 = 表姨
+	if (first === 'father' && second === 'mother') {
+		// 奶奶的兄弟姐妹的子女
+		if (third === 'olderBrother' || third === 'youngerBrother') {
+			if (fourth === 'son') return '表叔'
+			if (fourth === 'daughter') return '表姨'
+		}
+		if (third === 'olderSister' || third === 'youngerSister') {
+			if (fourth === 'son') return '表舅'
+			if (fourth === 'daughter') return '表姨'
+		}
+	}
+
+	// 妈妈->妈妈->... = 外婆的...
+	if (first === 'mother' && second === 'mother') {
+		if (third === 'olderBrother' || third === 'youngerBrother') {
+			if (fourth === 'son') return '表舅'
+			if (fourth === 'daughter') return '表姨'
+		}
+		if (third === 'olderSister' || third === 'youngerSister') {
+			if (fourth === 'son') return '表舅'
+			if (fourth === 'daughter') return '表姨'
+		}
+	}
+
+	// 妈妈->爸爸->... = 外公的...
+	if (first === 'mother' && second === 'father') {
+		if (third === 'olderBrother' || third === 'youngerBrother') {
+			if (fourth === 'son') return '表舅'
+			if (fourth === 'daughter') return '表姨'
+		}
+		if (third === 'olderSister' || third === 'youngerSister') {
+			if (fourth === 'son') return '表舅'
+			if (fourth === 'daughter') return '姨婆'
+		}
+	}
+
+	return '亲戚'
+}
+
+// 5层关系
+function getFiveLayerRelation(path: string[], gender: Gender, config: any): string {
+	const [first, second, third, fourth, fifth] = path
+
+	// 爸爸->爸爸->爸爸->兄弟->儿子/女儿 = 曾祖父的儿子的儿子的儿子/女儿
+	if (first === 'father' && second === 'father' && third === 'father') {
+		if (fourth === 'olderBrother' || fourth === 'youngerBrother') {
+			if (fifth === 'son') return '堂伯'
+			if (fifth === 'daughter') return '堂姑'
+		}
+	}
+
+	// 爸爸->爸爸->兄弟->儿子->儿子/女儿 = 爷爷的儿子的儿子的儿子/女儿
+	if (first === 'father' && second === 'father') {
+		if (third === 'olderBrother' || third === 'youngerBrother') {
+			if (fourth === 'son') {
+				if (fifth === 'son') return '堂侄'
+				if (fifth === 'daughter') return '堂侄女'
+			}
+		}
+	}
+
+	return '远房亲戚'
+}
+
+// 6层及以上关系
+function getSixPlusLayerRelation(path: string[], gender: Gender, config: any): string {
+	// 对于6层及以上的关系，返回更通用的称呼
+	return '远房亲戚'
+}
+
+// 通用关系（兜底）
+function getGenericRelation(path: string[], gender: Gender): string {
+	// 根据最后一个关系判断基本称呼
+	const lastRelation = path[path.length - 1]
+
+	if (lastRelation === 'son') return '远房侄子'
+	if (lastRelation === 'daughter') return '远房侄女'
+	if (lastRelation === 'olderBrother' || lastRelation === 'youngerBrother') {
+		return gender === 'male' ? '远房兄弟' : '远房兄弟'
+	}
+	if (lastRelation === 'olderSister' || lastRelation === 'youngerSister') {
+		return gender === 'female' ? '远房姐妹' : '远房姐妹'
+	}
+
+	return '远房亲戚'
+}
+
+// 根据关系路径生成占位符家庭成员
+export function generatePlaceholders(
+	relationPath: string[],
+	targetMember: FamilyMember
+): FamilyMember[] {
+	const placeholders: FamilyMember[] = []
+	const config = getRelationshipConfig()
+
+	// 示例：如果关系路径是 ['father', 'youngerBrother', 'son']
+	// 需要生成：爷爷、爸爸、叔叔（占位符）
+
+	if (relationPath.length >= 2) {
+		// 生成父辈占位符
+		const firstRelation = relationPath[0]
+
+		if (firstRelation === 'father') {
+			// 需要生成爷爷、奶奶
+			const grandfather: FamilyMember = {
+				id: 'placeholder_grandfather_' + Date.now(),
+				name: config.grandfather.title,
+				photo: '',
+				gender: 'male',
+				relationType: 'grandfather',
+				relationTitle: config.grandfather.title,
+				relationPath: ['grandfather'],
+				isOlder: null,
+				parentId: null,
+				spouseId: null,
+				children: [],
+				isPlaceholder: true,
+			}
+			placeholders.push(grandfather)
+
+			// 生成爸爸
+			const father: FamilyMember = {
+				id: 'placeholder_father_' + Date.now(),
+				name: config.father.title,
+				photo: '',
+				gender: 'male',
+				relationType: 'father',
+				relationTitle: config.father.title,
+				relationPath: ['father'],
+				isOlder: null,
+				parentId: grandfather.id,
+				spouseId: null,
+				children: [],
+				isPlaceholder: true,
+			}
+			placeholders.push(father)
+
+			// 如果第二层是兄弟
+			if (relationPath[1] === 'youngerBrother') {
+				const uncle: FamilyMember = {
+					id: 'placeholder_uncle_' + Date.now(),
+					name: config.fatherYoungerBrother.title,
+					photo: '',
+					gender: 'male',
+					relationType: 'fatherYoungerBrother',
+					relationTitle: config.fatherYoungerBrother.title,
+					relationPath: ['father', 'youngerBrother'],
+					isOlder: null,
+					parentId: grandfather.id,
+					spouseId: null,
+					children: [targetMember.id],
+					isPlaceholder: true,
+				}
+				placeholders.push(uncle)
+			}
+		}
+	}
+
+	return placeholders
+}
+
+// 生成唯一ID
+export function generateId(): string {
+	return 'member_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+}

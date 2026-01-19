@@ -1,0 +1,43 @@
+// 测试关系计算器
+import { calculateRelationshipTitle } from './utils/relationshipCalculator.uts'
+import type { Gender } from './types/family.uts'
+
+// 测试用例
+const testCases = [
+	{
+		name: '爸爸的爸爸的弟弟的儿子',
+		path: ['father', 'father', 'youngerBrother', 'son'],
+		gender: 'male' as Gender,
+		expected: '堂叔'
+	},
+	{
+		name: '爸爸的爸爸的哥哥的儿子',
+		path: ['father', 'father', 'olderBrother', 'son'],
+		gender: 'male' as Gender,
+		expected: '堂伯'
+	},
+	{
+		name: '爸爸的爸爸的弟弟的女儿',
+		path: ['father', 'father', 'youngerBrother', 'daughter'],
+		gender: 'female' as Gender,
+		expected: '堂姑'
+	},
+	{
+		name: '爸爸的妈妈的弟弟的儿子',
+		path: ['father', 'mother', 'youngerBrother', 'son'],
+		gender: 'male' as Gender,
+		expected: '表叔'
+	}
+]
+
+// 运行测试
+console.log('=== 4层关系测试 ===')
+testCases.forEach(test => {
+	const result = calculateRelationshipTitle(test.path, test.gender, null)
+	const pass = result === test.expected
+	console.log(`${pass ? '✓' : '✗'} ${test.name}`)
+	console.log(`  路径: ${test.path.join(' → ')}`)
+	console.log(`  预期: ${test.expected}`)
+	console.log(`  实际: ${result}`)
+	console.log('')
+})

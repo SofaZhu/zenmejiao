@@ -1,0 +1,150 @@
+// 亲戚关系称呼配置
+// 支持不同方言地区的称呼
+
+export type RelationshipTitle = {
+	title: string
+	description: string
+}
+
+export type RelationshipConfig = {
+	// 祖辈 - 父系
+	grandfather: RelationshipTitle // 爷爷
+	grandmother: RelationshipTitle // 奶奶
+	grandfatherOlderBrother: RelationshipTitle // 伯祖父
+	grandfatherYoungerBrother: RelationshipTitle // 叔祖父
+	grandfatherSister: RelationshipTitle // 姑婆
+	grandmotherBrother: RelationshipTitle // 舅公
+	grandmotherSister: RelationshipTitle // 姨婆
+
+	// 祖辈 - 母系
+	maternalGrandfather: RelationshipTitle // 外公
+	maternalGrandmother: RelationshipTitle // 外婆
+	maternalGrandfatherBrother: RelationshipTitle // 舅公
+	maternalGrandfatherSister: RelationshipTitle // 姑婆
+	maternalGrandmotherBrother: RelationshipTitle // 舅公
+	maternalGrandmotherSister: RelationshipTitle // 姨婆
+
+	// 父辈 - 父系
+	father: RelationshipTitle // 爸爸
+	fatherOlderBrother: RelationshipTitle // 伯父
+	fatherYoungerBrother: RelationshipTitle // 叔父
+	fatherSister: RelationshipTitle // 姑妈
+
+	// 父辈 - 母系
+	mother: RelationshipTitle // 妈妈
+	motherBrother: RelationshipTitle // 舅舅
+	motherSister: RelationshipTitle // 姨妈
+
+	// 同辈
+	olderBrother: RelationshipTitle // 哥哥
+	youngerBrother: RelationshipTitle // 弟弟
+	olderSister: RelationshipTitle // 姐姐
+	youngerSister: RelationshipTitle // 妹妹
+
+	// 堂表兄弟姐妹
+	olderCousinBrotherPaternal: RelationshipTitle // 堂哥
+	youngerCousinBrotherPaternal: RelationshipTitle // 堂弟
+	olderCousinSisterPaternal: RelationshipTitle // 堂姐
+	youngerCousinSisterPaternal: RelationshipTitle // 堂妹
+
+	olderCousinBrotherMaternal: RelationshipTitle // 表哥
+	youngerCousinBrotherMaternal: RelationshipTitle // 表弟
+	olderCousinSisterMaternal: RelationshipTitle // 表姐
+	youngerCousinSisterMaternal: RelationshipTitle // 表妹
+
+	// 子辈
+	son: RelationshipTitle // 儿子
+	daughter: RelationshipTitle // 女儿
+	nephew: RelationshipTitle // 侄子
+	niece: RelationshipTitle // 侄女
+	nephewFromSister: RelationshipTitle // 外甥
+	nieceFromSister: RelationshipTitle // 外甥女
+
+	// 孙辈
+	grandson: RelationshipTitle // 孙子
+	granddaughter: RelationshipTitle // 孙女
+	maternalGrandson: RelationshipTitle // 外孙
+	maternalGranddaughter: RelationshipTitle // 外孙女
+}
+
+// 普通话标准称呼（默认）
+export const standardChinese: RelationshipConfig = {
+	// 祖辈 - 父系
+	grandfather: { title: '爷爷', description: '祖父' },
+	grandmother: { title: '奶奶', description: '祖母' },
+	grandfatherOlderBrother: { title: '伯祖父', description: '爷爷的哥哥' },
+	grandfatherYoungerBrother: { title: '叔祖父', description: '爷爷的弟弟' },
+	grandfatherSister: { title: '姑婆', description: '爷爷的姐妹' },
+	grandmotherBrother: { title: '舅公', description: '奶奶的兄弟' },
+	grandmotherSister: { title: '姨婆', description: '奶奶的姐妹' },
+
+	// 祖辈 - 母系
+	maternalGrandfather: { title: '外公', description: '外祖父' },
+	maternalGrandmother: { title: '外婆', description: '外祖母' },
+	maternalGrandfatherBrother: { title: '舅公', description: '外公的兄弟' },
+	maternalGrandfatherSister: { title: '姑婆', description: '外公的姐妹' },
+	maternalGrandmotherBrother: { title: '舅公', description: '外婆的兄弟' },
+	maternalGrandmotherSister: { title: '姨婆', description: '外婆的姐妹' },
+
+	// 父辈 - 父系
+	father: { title: '爸爸', description: '父亲' },
+	fatherOlderBrother: { title: '伯父', description: '爸爸的哥哥' },
+	fatherYoungerBrother: { title: '叔父', description: '爸爸的弟弟' },
+	fatherSister: { title: '姑妈', description: '爸爸的姐妹' },
+
+	// 父辈 - 母系
+	mother: { title: '妈妈', description: '母亲' },
+	motherBrother: { title: '舅舅', description: '妈妈的兄弟' },
+	motherSister: { title: '姨妈', description: '妈妈的姐妹' },
+
+	// 同辈
+	olderBrother: { title: '哥哥', description: '兄' },
+	youngerBrother: { title: '弟弟', description: '弟' },
+	olderSister: { title: '姐姐', description: '姐' },
+	youngerSister: { title: '妹妹', description: '妹' },
+
+	// 堂表兄弟姐妹
+	olderCousinBrotherPaternal: { title: '堂哥', description: '伯父/叔父的儿子(比我大)' },
+	youngerCousinBrotherPaternal: { title: '堂弟', description: '伯父/叔父的儿子(比我小)' },
+	olderCousinSisterPaternal: { title: '堂姐', description: '伯父/叔父的女儿(比我大)' },
+	youngerCousinSisterPaternal: { title: '堂妹', description: '伯父/叔父的女儿(比我小)' },
+
+	olderCousinBrotherMaternal: { title: '表哥', description: '舅舅/姨妈/姑妈的儿子(比我大)' },
+	youngerCousinBrotherMaternal: { title: '表弟', description: '舅舅/姨妈/姑妈的儿子(比我小)' },
+	olderCousinSisterMaternal: { title: '表姐', description: '舅舅/姨妈/姑妈的女儿(比我大)' },
+	youngerCousinSisterMaternal: { title: '表妹', description: '舅舅/姨妈/姑妈的女儿(比我小)' },
+
+	// 子辈
+	son: { title: '儿子', description: '子' },
+	daughter: { title: '女儿', description: '女' },
+	nephew: { title: '侄子', description: '兄弟的儿子' },
+	niece: { title: '侄女', description: '兄弟的女儿' },
+	nephewFromSister: { title: '外甥', description: '姐妹的儿子' },
+	nieceFromSister: { title: '外甥女', description: '姐妹的女儿' },
+
+	// 孙辈
+	grandson: { title: '孙子', description: '儿子的儿子' },
+	granddaughter: { title: '孙女', description: '儿子的女儿' },
+	maternalGrandson: { title: '外孙', description: '女儿的儿子' },
+	maternalGranddaughter: { title: '外孙女', description: '女儿的女儿' },
+}
+
+// 北方方言（姥姥、姥爷）
+export const northernChinese: RelationshipConfig = {
+	...standardChinese,
+	maternalGrandfather: { title: '姥爷', description: '外祖父' },
+	maternalGrandmother: { title: '姥姥', description: '外祖母' },
+}
+
+// 当前使用的称呼配置
+export let currentConfig: RelationshipConfig = standardChinese
+
+// 切换称呼配置
+export function setRelationshipConfig(config: RelationshipConfig) {
+	currentConfig = config
+}
+
+// 获取当前称呼配置
+export function getRelationshipConfig(): RelationshipConfig {
+	return currentConfig
+}

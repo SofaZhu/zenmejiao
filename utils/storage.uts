@@ -1,0 +1,78 @@
+// 数据存储工具（使用 uni.storage）
+
+import type { UserProfile, FamilyMember, FamilyNetwork } from '../types/family.uts'
+
+const USER_PROFILE_KEY = 'user_profile'
+const FAMILY_MEMBERS_KEY = 'family_members'
+
+// 保存用户信息
+export function saveUserProfile(profile: UserProfile): void {
+	uni.setStorageSync(USER_PROFILE_KEY, JSON.stringify(profile))
+}
+
+// 获取用户信息
+export function getUserProfile(): UserProfile | null {
+	try {
+		const data = uni.getStorageSync(USER_PROFILE_KEY)
+		if (data) {
+			return JSON.parse(data as string) as UserProfile
+		}
+	} catch (e) {
+		console.error('获取用户信息失败', e)
+	}
+	return null
+}
+
+// 保存家庭成员列表
+export function saveFamilyMembers(members: FamilyMember[]): void {
+	uni.setStorageSync(FAMILY_MEMBERS_KEY, JSON.stringify(members))
+}
+
+// 获取家庭成员列表
+export function getFamilyMembers(): FamilyMember[] {
+	try {
+		const data = uni.getStorageSync(FAMILY_MEMBERS_KEY)
+		if (data) {
+			return JSON.parse(data as string) as FamilyMember[]
+		}
+	} catch (e) {
+		console.error('获取家庭成员失败', e)
+	}
+	return []
+}
+
+// 添加家庭成员
+export function addFamilyMember(member: FamilyMember): void {
+	const members = getFamilyMembers()
+	members.push(member)
+	saveFamilyMembers(members)
+}
+
+// 更新家庭成员
+export function updateFamilyMember(memberId: string, updates: Partial<FamilyMember>): void {
+	const members = getFamilyMembers()
+	const index = members.findIndex(m => m.id === memberId)
+	if (index !== -1) {
+		members[index] = { ...members[index], ...updates }
+		saveFamilyMembers(members)
+	}
+}
+
+// 删除家庭成员
+export function deleteFamilyMember(memberId: string): void {
+	const members = getFamilyMembers()
+	const filtered = members.filter(m => m.id !== memberId)
+	saveFamilyMembers(filtered)
+}
+
+// 根据ID获取家庭成员
+export function getFamilyMemberById(memberId: string): FamilyMember | null {
+	const members = getFamilyMembers()
+	return members.find(m => m.id === memberId) || null
+}
+
+// 清空所有数据
+export function clearAllData(): void {
+	uni.removeStorageSync(USER_PROFILE_KEY)
+	uni.removeStorageSync(FAMILY_MEMBERS_KEY)
+}
