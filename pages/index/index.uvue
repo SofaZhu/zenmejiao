@@ -278,6 +278,19 @@
 	}
 </script>
 
+<script lang="uts">
+	// 分享功能
+	export default {
+		onShareAppMessage() {
+			return {
+				title: '过年怎么叫 - 亲戚称呼计算器',
+				path: '/pages/index/index',
+				imageUrl: '/static/fenxiang.png'
+			}
+		}
+	}
+</script>
+
 <style>
 	.container {
 		padding: 20px;
